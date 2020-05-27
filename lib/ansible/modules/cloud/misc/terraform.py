@@ -355,12 +355,16 @@ def main():
         else:
             module.fail_json(msg='Could not find plan_file "{0}", check the path and try again.'.format(plan_file))
     else:
+        # Run the "terraform plan" command
         plan_file, needs_application, out, err, command = build_plan(command, project_path, variables_args, state_file,
                                                                      module.params.get('targets'), state, plan_file)
         command.append(plan_file)
 
     out, err = '', ''
-    if needs_application and not module.check_mode and not state == 'planned':
+    if module.check_mode:
+        changed = needs_application
+    elif needs_application and not state == 'planned':
+        # Run the "terraform apply command
         rc, out, err = module.run_command(command, cwd=project_path)
         # checks out to decide if changes were made during execution
         if '0 added, 0 changed' not in out and not state == "absent" or '0 destroyed' not in out:
@@ -371,6 +375,7 @@ def main():
                 command=' '.join(command)
             )
 
+    # Run the "terraform output" command
     outputs_command = [command[0], 'output', '-no-color', '-json'] + _state_args(state_file)
     rc, outputs_text, outputs_err = module.run_command(outputs_command, cwd=project_path)
     if rc == 1:
